@@ -6,6 +6,12 @@ const BOARD_COLOR = 0x2E2E2EFF; // Jet Black
 const SNAKE_COLOR = 0x81D4FAFF; // Light Blue Pastel
 const FOOD_COLOR = 0xFFCDD2FF; // Soft Coral
 
+const screen_width: comptime_int = 800;
+const screen_height: comptime_int = 450;
+
+const _cols: comptime_int = screen_width / 10;
+const _rows: comptime_int = screen_height / 10;
+
 const Vector2 = struct {
     x: i16,
     y: i16,
@@ -70,27 +76,29 @@ const GameBoard = struct {
     width: u16 = 400,
     cols: u16 = 0,
     rows: u16 = 0,
-    rect_buffer: std.ArrayList(Rect),
+    rect_buffer: [_cols * _rows]Rect,
     player: Snake,
     player_direction: PlayerDirection,
     food: Rect,
 
-    pub fn init(alloc: std.mem.Allocator, width: u16, height: u16) GameBoard {
-        const cols = width / 10;
-        const rows = height / 10;
-
+    pub fn init(width: u16, height: u16) GameBoard {
         return .{
             .height = height,
             .width = width,
-            .cols = cols,
-            .rows = rows,
-            .player = Snake.init(.{ .x = 10, .y = 10 }, .{ .x = @as(i16, @intCast(cols)), .y = @as(i16, @intCast(rows)) }),
+            .cols = _cols,
+            .rows = _rows,
+            .player = Snake.init(.{ .x = 10, .y = 10 }, .{ .x = @as(i16, @intCast(_cols)), .y = @as(i16, @intCast(_rows)) }),
             .player_direction = .RIGHT,
-            .rect_buffer = std.ArrayList(Rect).init(alloc),
+            .rect_buffer = [_]Rect{
+                .{
+                    .pos = .{ .x = 0, .y = 0 },
+                    .color = 0x000000FF,
+                },
+            } ** 3600,
             .food = .{
                 .pos = .{
-                    .x = @as(i16, @intCast(rand.intRangeAtMost(u16, 0, cols - 1))),
-                    .y = @as(i16, @intCast(rand.intRangeAtMost(u16, 0, rows - 1))),
+                    .x = @as(i16, @intCast(rand.intRangeAtMost(u16, 0, _cols - 1))),
+                    .y = @as(i16, @intCast(rand.intRangeAtMost(u16, 0, _rows - 1))),
                 },
                 .color = FOOD_COLOR,
             },
@@ -98,32 +106,31 @@ const GameBoard = struct {
     }
 
     pub fn deinit(self: *GameBoard) void {
-        self.rect_buffer.deinit();
+        _ = self;
+        //self.rect_buffer.deinit();
     }
 
     pub fn predraw(self: *GameBoard) !void {
-        std.debug.assert(self.rect_buffer.items.len == 0);
+        //std.debug.assert(self.rect_buffer.len == 0);
         for (0..self.rows) |i| for (0..self.cols) |j| {
-            try self.rect_buffer.append(
-                .{
-                    .size = .{ .x = 8, .y = 8 },
-                    .pos = .{ .x = @as(i16, @intCast(j)), .y = @as(i16, @intCast(i)) },
-                    .color = BOARD_COLOR,
-                },
-            );
+            self.rect_buffer[(i * self.cols) + j] = .{
+                .size = .{ .x = 8, .y = 8 },
+                .pos = .{ .x = @as(i16, @intCast(j)), .y = @as(i16, @intCast(i)) },
+                .color = BOARD_COLOR,
+            };
         };
     }
 
     pub fn draw(self: *GameBoard) void {
         //Draw food
         const food_coord: u16 = (@as(u16, @intCast(self.food.pos.y)) * self.cols) + @as(u16, @intCast(self.food.pos.x));
-        self.rect_buffer.items[food_coord].color = FOOD_COLOR;
+        self.rect_buffer[food_coord].color = FOOD_COLOR;
 
         //Draw player
         for (self.player.segments[0..self.player.size], 0..) |seg, n| {
             const flat_coord: u16 = (@as(u16, @intCast(seg.y)) * self.cols) + @as(u16, @intCast(seg.x));
-            std.debug.assert(flat_coord < self.rect_buffer.items.len);
-            self.rect_buffer.items[flat_coord].color = SNAKE_COLOR;
+            std.debug.assert(flat_coord < self.rect_buffer.len);
+            self.rect_buffer[flat_coord].color = SNAKE_COLOR;
 
             if (n > 0 and self.player.segments[0].x == seg.x and self.player.segments[0].y == seg.y) {
                 self.player.size = 3;
@@ -132,8 +139,14 @@ const GameBoard = struct {
         }
 
         //Draw board
-        for (self.rect_buffer.items) |*rect| {
-            ray.drawRectangle(rect.pos.x * 10, rect.pos.y * 10, rect.size.x, rect.size.y, ray.getColor(rect.color));
+        for (&self.rect_buffer) |*rect| {
+            ray.drawRectangle(
+                @as(i32, @intCast(rect.pos.x * 10)),
+                @as(i32, @intCast(rect.pos.y * 10)),
+                @as(i32, @intCast(rect.size.x)),
+                @as(i32, @intCast(rect.size.y)),
+                ray.getColor(rect.color),
+            );
             rect.color = BOARD_COLOR;
         }
     }
@@ -144,13 +157,7 @@ export fn _start() void {
 }
 
 pub fn run() !void {
-    const screen_width = 800;
-    const screen_height = 450;
-
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() != .ok) @panic("Memory leak!");
-
-    var gb = GameBoard.init(gpa.allocator(), screen_width, screen_height);
+    var gb = GameBoard.init(screen_width, screen_height);
     defer gb.deinit();
 
     try gb.predraw();
