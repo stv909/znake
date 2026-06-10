@@ -3,7 +3,7 @@
     .version = "0.0.0",
     .dependencies = .{
         .raylib_zig = .{
-            .url = "https://github.com/zadockmaloba/raylib-zig/archive/refs/heads/devel.zip",
+            .url = "https://github.com/stv909/raylib-zig/archive/refs/heads/devel.zip",
             .hash = "122058d3ea6318efb819d0bffba630afd1a459fa3a99b4bfe4b680a937d5de04d2fc",
             .lazy = false,
         },
