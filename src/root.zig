@@ -195,6 +195,10 @@ fn pollKeyEvents(board: *GameBoard) void {
         .key_right => board.player_direction = .RIGHT,
         .key_up => board.player_direction = .TOP,
         .key_down => board.player_direction = .BOTTOM,
+        .key_a => board.player_direction = .LEFT,
+        .key_d => board.player_direction = .RIGHT,
+        .key_w => board.player_direction = .TOP,
+        .key_s => board.player_direction = .BOTTOM,
         else => {},
     }
 }
