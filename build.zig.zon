@@ -4,7 +4,7 @@
     .dependencies = .{
         .raylib_zig = .{
             .url = "https://github.com/stv909/raylib-zig/archive/refs/heads/devel.zip",
-            .hash = "122058d3ea6318efb819d0bffba630afd1a459fa3a99b4bfe4b680a937d5de04d2fc",
+            .hash = "1220e0a4cc96e93ac0a4e615bdb0822be4267ea38bda52e1b70f24f08b31aebd9d6b",
             .lazy = false,
         },
     },
