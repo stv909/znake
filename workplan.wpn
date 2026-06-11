@@ -1,0 +1,99 @@
++ найти готовую реализацию snake на raylib
+	url * https://www.raylib.com/games/classics/loader.html?name=classic_snake
+	url * https://github.com/raysan5/raylib-games/blob/master/classics/src/snake.c
++ погонять и понять какие у неё плюсы и минусы
+	* написано на C
+	* реализует базовую логику
+	* очень простая 2д графика
+	* дискретные перемещения
+	* неудобное для меня управление на стрелках, нужно перевести на wasd
+	* слишком высокая скорость перемещения, нужно сделать регулируемой
+		* например, через уровень сложности
++ собрать игру локально под натив
+	+ найти и изучить файл сборки классических игр
+		url * https://github.com/raysan5/raylib-games/blob/master/classics/src/Makefile
+		* реально там больше кода, чем в любой из игр. это не готовый сборщик, а полуфабрикат,
+		* из которого надо будет лепить что-то рабочее на своей платформе.
+	+ решить стоит ли влазить в настройку всего этого
+		* в принципе нужно настроить 14 переменных, чтобы запустить сборку на макос десктоп
+		* все они помечены как ?=
+		* также можно опираться на уже скомпилированные бинари либы
+		url * https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_macos.tar.gz
+		* есть опции сборки через cmake и zig - тоже надо понять через что лучше
+		* нашёл проект, который как раз создан под сборку в zig - вот с ним и попробуем повозиться
+			* по крайней мере это новый подход, и в нём есть смысл
+	+ собрать znake под zig
+		url * https://github.com/zadockmaloba/znake
+		* клонируем себе и пробуем собрать
+		bash * git clone --recurse-submodules git@github.com:zadockmaloba/znake.git
+		x попробовать собрать оригинал под свежим zig (0.16.0)
+			* качаем свежий zig
+			url * https://ziglang.org/download/0.16.0/zig-x86_64-macos-0.16.0.tar.xz
+			* копируем в репозиторий игры в каталог zig-0.16.0
+			bash * cd ~/Documents/GitHub/znake
+			bash * zig-0.16.0/zig build run
+			* получаем ошибку - build.zig.zon написан в старом формате
+		x попробовать собрать оригинал под легаси zig (0.13.0)
+			* качаем легаси zig
+			url * https://ziglang.org/download/0.13.0/zig-macos-x86_64-0.13.0.tar.xz
+			bash * cd ~/Documents/GitHub/znake
+			bash * zig-0.13.0/zig build run
+			* получаем ошибку - сломан легаси билд raylib 5.5
+		+ попробовать собрать форк под легаси zig (0.13.0)
+			+ форкаем основную репу https://github.com/zadockmaloba/znake
+				url * https://github.com/stv909/znake
+			+ клонируем локально на замену оригинальной версии
+				bash * cd ~/Documents/GitHub
+				bash * git clone --recurse-submodules git@github.com:stv909/znake.git
+				bash * cd znake
+			+ пробуем собрать, чтобы получить ошибку
+				* копируем zig бинари в каталог проекта (не забываем заигнорить из в .gitignore) и запускаем сборку
+				bash * zig-0.13.0/zig build run
+				* возникает ошибка при сборке
+				error * build.zig.zon:8:20: error: unable to discover remote git server capabilities: ProtocolError
+					* .url = "git+https://github.com/hexops/xcode-frameworks#a6bf82e032d4d9923ad5c222d466710fcc05f249",
+				* её можно исправить путём форканья и внесения правок во все депенденси через build.zig.zon
+			+ правим депенденси через форки пока сборка не заработает
+				* форкаем депенденси репу https://github.com/zadockmaloba/raylib-zig
+				url * https://github.com/stv909/raylib-zig
+				* и подменяем её в build.zig.zon основного проекта
+				* клонируем raylib-zig и пробуем разобраться в каком из его депенденси ошибка
+				* ошибка в основном raylib v5.5 - там некорректная ссылка на xcode framework
+				url * git+https://github.com/hexops/xcode-frameworks#9a45f3ac977fd25dff77e58c6de1870b6808c4a7
+				* вот корректная ссылка:
+				url * https://pkg.machengine.org/xcode-frameworks/9a45f3ac977fd25dff77e58c6de1870b6808c4a7.tar.gz
+				* определяем хещ для неё, чтобы включить затем в build.zig.zon
+				bash * zig-0.13.0/zig fetch https://pkg.machengine.org/xcode-frameworks/9a45f3ac977fd25dff77e58c6de1870b6808c4a7.tar.gz
+				hash * 122098b9174895f9708bc824b0f9e550c401892c40a900006459acf2cbf78acd99bb
+				* клонируем старую версию https://github.com/raysan5/raylib чтобы потом вности правку в депенденси
+				1 * клонируем оригинальную репу
+					url * https://github.com/raysan5/raylib
+				2 * откатываем свой форк на старый коммит, которому привязана сборка: c1ab645ca298a2801097931d1079b10ff7eb9df8
+					bash * cd ~/Documents/GitHub
+					bash * git clone git@github.com:stv909/raylib.git
+					bash * cd raylib
+					bash * git reset --hard c1ab645ca298a2801097931d1079b10ff7eb9df8
+					bash * git push --force origin HEAD:master
+				3 * вносим в build.zig.zon корректную ссылку на xcode frameworks
+					* .url = "https://pkg.machengine.org/xcode-frameworks/9a45f3ac977fd25dff77e58c6de1870b6808c4a7.tar.gz"
+					* .hash = "122098b9174895f9708bc824b0f9e550c401892c40a900006459acf2cbf78acd99bb"
+				4 * протаскиваем raylib с фиксом через форк raylib-zig
+					* .url = "https://github.com/stv909/raylib/archive/eab25fee366d1c8564a92be24d8ab99f9438a486.tar.gz",
+					* .hash = "1220fba0c0499368b65cfb6b97d4a356642ef4b4a40ed0a84d370d051ea587fc96d0",
+				5 * пробуем сборку заново
+				* всё получилось!
++ модифицировать игру, чтобы в неё можно было нормально играть
+	* расширить управление со стрелок до wasd
+. портировать мой форк znake на свежий zig (0.16.0)
+- перевести графику с 2d в 3d
+	* можно на первом этапе просто сделать изометрическую камеру
+	* или даже орбитальную - с вращением через мышь.
+- подумать как реализовать вид от первого лица с минимальными изменениями в коде игры
+	* но при этом чтобы камера двигалась плавно
+	* как вариант:
+	1 * на уровне управления дать возможность только крутить головой влево/вправо
+		* едет вперёд змейка сама, автоматически с заданной скоростью
+	2 * поворот делать достаточно долго, чтобы камера не резко дёргалась
+		* нужно крутить головной бокс вокруг своей оси в нужную сторону "лицом"
+	3 * перемещение змеи тоже делать плавно
+		* нужно линейно интерполировать перемещение каждого куба тела в требуемом направлении
