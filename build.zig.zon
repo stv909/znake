@@ -1,10 +1,11 @@
 .{
-    .name = "znake",
+    .name = .znake,
+    .fingerprint = 0x5c7d09efa62ffce7,
     .version = "0.0.0",
     .dependencies = .{
         .raylib_zig = .{
-            .url = "https://github.com/stv909/raylib-zig/archive/refs/heads/devel.zip",
-            .hash = "1220e0a4cc96e93ac0a4e615bdb0822be4267ea38bda52e1b70f24f08b31aebd9d6b",
+            .url = "https://github.com/raylib-zig/raylib-zig/archive/refs/heads/devel.zip",
+            .hash = "raylib_zig-6.0.0-KE8REDJ4BQBu7lKwYNt6R4j5ywPeS37zqW6zrtjCcRwH",
             .lazy = false,
         },
     },

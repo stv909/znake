@@ -1,6 +1,7 @@
 const std = @import("std");
 const ray = @import("raylib");
-const rand = std.crypto.random;
+
+var rand: std.Random = undefined;
 
 const BOARD_COLOR = 0x2E2E2EFF; // Jet Black
 const SNAKE_COLOR = 0x81D4FAFF; // Light Blue Pastel
@@ -19,7 +20,7 @@ const Vector2 = struct {
 
 const Snake = struct {
     size: u16 = 10,
-    segments: [1024]Vector2 = .{.{ .x = 0, .y = 0 }} ** 1024,
+    segments: [1024]Vector2 = [_]Vector2{.{ .x = 0, .y = 0 }} ** 1024,
     pos: Vector2,
     bounds: Vector2,
 
@@ -152,11 +153,19 @@ const GameBoard = struct {
     }
 };
 
-export fn _start() void {
-    run() catch |err| std.debug.print("Error: {}\n", .{err});
-}
+// Why I even need this function?
+//export fn _start(init: std.process.Init) void {
+//    run(init) catch |err| std.debug.print("Error: {}\n", .{err});
+//}
 
-pub fn run() !void {
+pub fn run(init: std.process.Init) !void {
+    // Initialize your deterministic PRNG with the seed
+    const timestamp = std.Io.Clock.now(.real, init.io);
+    const seconds = std.Io.Timestamp.toSeconds(timestamp);
+    const seed: u64 = @as(u64, @intCast(seconds));
+    var prng = std.Random.DefaultPrng.init(seed);
+    rand = prng.random();
+
     var gb = GameBoard.init(screen_width, screen_height);
     defer gb.deinit();
 
@@ -191,14 +200,14 @@ pub fn run() !void {
 fn pollKeyEvents(board: *GameBoard) void {
     const ky = ray.getKeyPressed();
     switch (ky) {
-        .key_left => board.player_direction = .LEFT,
-        .key_right => board.player_direction = .RIGHT,
-        .key_up => board.player_direction = .TOP,
-        .key_down => board.player_direction = .BOTTOM,
-        .key_a => board.player_direction = .LEFT,
-        .key_d => board.player_direction = .RIGHT,
-        .key_w => board.player_direction = .TOP,
-        .key_s => board.player_direction = .BOTTOM,
+        .left => board.player_direction = .LEFT,
+        .right => board.player_direction = .RIGHT,
+        .up => board.player_direction = .TOP,
+        .down => board.player_direction = .BOTTOM,
+        .a => board.player_direction = .LEFT,
+        .d => board.player_direction = .RIGHT,
+        .w => board.player_direction = .TOP,
+        .s => board.player_direction = .BOTTOM,
         else => {},
     }
 }

@@ -32,16 +32,19 @@ pub fn build(b: *std.Build) void {
     const raylib_artifact = raylib_dep.artifact("raylib"); // raylib C addStaticLibrary
 
     if (!build_wasm_opt) {
-        const exe = b.addExecutable(.{
-            .name = "znake",
+        const exe_mod = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
         });
+        exe_mod.addImport("raylib", raylib);
+        exe_mod.addImport("raygui", raygui);
+        exe_mod.linkLibrary(raylib_artifact);
 
-        exe.linkLibrary(raylib_artifact);
-        exe.root_module.addImport("raylib", raylib);
-        exe.root_module.addImport("raygui", raygui);
+        const exe = b.addExecutable(.{
+            .name = "znake",
+            .root_module = exe_mod,
+        });
 
         b.installArtifact(exe);
         const run_cmd = b.addRunArtifact(exe);
@@ -54,15 +57,18 @@ pub fn build(b: *std.Build) void {
         const run_step = b.step("run", "Run the app");
         run_step.dependOn(&run_cmd.step);
 
-        const exe_unit_tests = b.addTest(.{
+        const test_mod = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
         });
+        test_mod.addImport("raylib", raylib);
+        test_mod.addImport("raygui", raygui);
+        test_mod.linkLibrary(raylib_artifact);
 
-        exe_unit_tests.linkLibrary(raylib_artifact);
-        exe_unit_tests.root_module.addImport("raylib", raylib);
-        exe_unit_tests.root_module.addImport("raygui", raygui);
+        const exe_unit_tests = b.addTest(.{
+            .root_module = test_mod,
+        });
 
         const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
 
@@ -70,13 +76,21 @@ pub fn build(b: *std.Build) void {
         test_step.dependOn(&run_exe_unit_tests.step);
     } else {
         const wasm_step = b.step("wasm", "Build wasm module");
-        const wasm_lib = emcc.compileForEmscripten(b, "znake_wasm", "src/main.zig", target, .ReleaseSmall) catch |err| {
+        const wasm_mod = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = .ReleaseSmall,
+            .imports = &.{
+                .{ .name = "raylib", .module = raylib },
+                .{ .name = "raygui", .module = raygui },
+            },
+        });
+        wasm_mod.linkLibrary(raylib_artifact);
+
+        const wasm_lib = emcc.compileForEmscripten(b, "znake_wasm", wasm_mod) catch |err| {
             std.log.err("Error compiling for emscripten: {} \n", .{err});
             return;
         };
-        wasm_lib.linkLibrary(raylib_artifact);
-        wasm_lib.root_module.addImport("raylib", raylib);
-        wasm_lib.root_module.addImport("raygui", raygui);
         wasm_lib.entry = .{ .symbol_name = "_main" };
         wasm_lib.export_table = true;
         wasm_lib.initial_memory = 0x200000;

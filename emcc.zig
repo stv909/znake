@@ -11,14 +11,13 @@ pub fn emscriptenRunStep(b: *std.Build) !*std.Build.Step.Run {
         .windows => "emrun.bat",
         else => "emrun",
     };
-    var emrun_run_arg = try b.allocator.alloc(u8, b.sysroot.?.len + emrunExe.len + 1);
-    defer b.allocator.free(emrun_run_arg);
 
-    if (b.sysroot == null) {
-        emrun_run_arg = try std.fmt.bufPrint(emrun_run_arg, "{s}", .{emrunExe});
-    } else {
-        emrun_run_arg = try std.fmt.bufPrint(emrun_run_arg, "{s}" ++ std.fs.path.sep_str ++ "{s}", .{ b.sysroot.?, emrunExe });
-    }
+    const emrun_run_arg = if (b.sysroot) |sysroot| blk: {
+        break :blk try std.fs.path.join(b.allocator, &.{ sysroot, emrunExe });
+    } else blk: {
+        break :blk try b.allocator.dupe(u8, emrunExe);
+    };
+    defer b.allocator.free(emrun_run_arg);
 
     const run_cmd = b.addSystemCommand(&[_][]const u8{ emrun_run_arg, emccOutputDir ++ emccOutputFile });
     return run_cmd;
@@ -28,9 +27,7 @@ pub fn emscriptenRunStep(b: *std.Build) !*std.Build.Step.Run {
 pub fn compileForEmscripten(
     b: *std.Build,
     name: []const u8,
-    root_source_file: []const u8,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.Mode,
+    root_module: *std.Build.Module,
 ) !*std.Build.Step.Compile {
     // TODO: It might be a good idea to create a custom compile step, that does
     // both the compile to static library and the link with emcc by overidding
@@ -38,16 +35,14 @@ pub fn compileForEmscripten(
     // it messes with the build system itself.
 
     // The project is built as a library and linked later.
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = name,
-        .root_source_file = b.path(root_source_file),
-        .target = target,
-        .optimize = optimize,
+        .root_module = root_module,
     });
 
     const emscripten_headers = try std.fs.path.join(b.allocator, &.{ b.sysroot.?, "cache", "sysroot", "include" });
     defer b.allocator.free(emscripten_headers);
-    lib.addIncludePath(.{ .cwd_relative = emscripten_headers });
+    lib.root_module.addIncludePath(.{ .cwd_relative = emscripten_headers });
     return lib;
 }
 
@@ -71,18 +66,13 @@ pub fn linkWithEmscripten(
         .windows => "emcc.bat",
         else => "emcc",
     };
-    var emcc_run_arg = try b.allocator.alloc(u8, b.sysroot.?.len + emccExe.len + 1);
-    defer b.allocator.free(emcc_run_arg);
 
-    if (b.sysroot == null) {
-        emcc_run_arg = try std.fmt.bufPrint(emcc_run_arg, "{s}", .{emccExe});
-    } else {
-        emcc_run_arg = try std.fmt.bufPrint(
-            emcc_run_arg,
-            "{s}" ++ std.fs.path.sep_str ++ "{s}",
-            .{ b.sysroot.?, emccExe },
-        );
-    }
+    const emcc_run_arg = if (b.sysroot) |sysroot| blk: {
+        break :blk try std.fs.path.join(b.allocator, &.{ sysroot, emccExe });
+    } else blk: {
+        break :blk try b.allocator.dupe(u8, emccExe);
+    };
+    defer b.allocator.free(emcc_run_arg);
 
     // Create the output directory because emcc can't do it.
     const mkdir_command = switch (builtin.os.tag) {
