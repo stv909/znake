@@ -4,7 +4,7 @@ const ray = @import("raylib");
 var rand: std.Random = undefined;
 
 const BACK_COLOR = 0x404040FF;
-const WALL_COLOR = 0xFF6B6BFF; // Coral
+const WALL_COLOR = 0x2E502EFF; // Greenish
 const BOARD_COLOR = 0x2E2E2EFF; // Jet Black
 const SNAKE_COLOR = 0x81D4FAFF; // Light Blue Pastel
 //const FOOD_COLOR = 0xFFCDD2FF; // Soft Coral
