@@ -7,8 +7,8 @@ const BOARD_COLOR = 0x2E2E2EFF; // Jet Black
 const SNAKE_COLOR = 0x81D4FAFF; // Light Blue Pastel
 const FOOD_COLOR = 0xFFCDD2FF; // Soft Coral
 
-const screen_width: comptime_int = 800;
-const screen_height: comptime_int = 600;
+const screen_width: comptime_int = 1270;
+const screen_height: comptime_int = 640;
 const _cell_size: comptime_int = 10;
 const _margin_size = 2;
 comptime {
@@ -21,6 +21,11 @@ comptime {
 }
 const _cols: comptime_int = screen_width / _cell_size;
 const _rows: comptime_int = screen_height / _cell_size;
+comptime {
+    if (_cols * _rows >= 8192) {
+        @compileError("board size exceeds maximum segment count");
+    }
+}
 
 const Vector2 = struct {
     x: i16,
