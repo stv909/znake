@@ -42,20 +42,23 @@ const Snake = struct {
         };
     }
 
+    fn reverse_direction(self: *Snake) void {
+        switch (self.direction) {
+            .RIGHT => self.direction = .LEFT,
+            .LEFT => self.direction = .RIGHT,
+            .TOP => self.direction = .BOTTOM,
+            .BOTTOM => self.direction = .TOP,
+        }
+    }
+
     pub fn move(self: *Snake, delta: Vector2) void {
         self.pos.x += delta.x;
         self.pos.y += delta.y;
 
-        if (self.pos.x >= self.bounds.x) {
-            self.pos.x = 0;
-        } else if (self.pos.x < 0) {
-            self.pos.x = self.bounds.x - 1;
-        }
-
-        if (self.pos.y >= self.bounds.y) {
-            self.pos.y = 0;
-        } else if (self.pos.y < 0) {
-            self.pos.y = self.bounds.y - 1;
+        if (self.pos.x >= self.bounds.x or self.pos.x < 0 or self.pos.y >= self.bounds.y or self.pos.y < 0) {
+            self.reverse_direction();
+            self.pos.x -= delta.x;
+            self.pos.y -= delta.y;
         }
         //std.debug.print("x: {}, y:{}\n", .{ self.pos.x, self.pos.y });
         self.shift();
