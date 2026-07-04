@@ -4,9 +4,8 @@ const ray = @import("raylib");
 var rand: std.Random = undefined;
 
 const BACK_COLOR = 0x404040FF;
-const WALL_COLOR = 0x2E502EFF; // Greenish
+const WALL_COLOR = 0x81D4FAFF; // Light Blue Pastel
 const BOARD_COLOR = 0x2E2E2EFF; // Jet Black
-const SNAKE_COLOR = 0x81D4FAFF; // Light Blue Pastel
 //const FOOD_COLOR = 0xFFCDD2FF; // Soft Coral
 
 const screen_width: comptime_int = 900;
@@ -18,6 +17,79 @@ comptime {
     if (_cols * _rows >= 8192) {
         @compileError("board size exceeds maximum segment count");
     }
+}
+
+/// Draw a snake head that fits inside one _cell_size cube.
+///
+///   pos   – world position (bottom-center of the cell)
+///   dir   – normalised direction the snake faces
+///   scale – size multiplier (1.0 fills one cell)
+fn drawSnakeHead(pos: ray.Vector3, dir: ray.Vector3, scale: f32) void {
+    const s = scale;
+
+    // Local coordinate frame
+    const forward = dir.normalize();
+    const world_up = ray.Vector3{ .x = 0, .y = 1, .z = 0 };
+    const right = world_up.crossProduct(forward).normalize();
+    const up = forward.crossProduct(right).normalize();
+
+    // Local → world helper
+    const L = struct {
+        fn at(b: ray.Vector3, fx: f32, uy: f32, rz: f32, f: ray.Vector3, u: ray.Vector3, r: ray.Vector3) ray.Vector3 {
+            return b.add(f.scale(fx)).add(u.scale(uy)).add(r.scale(rz));
+        }
+    }.at;
+
+    // ── Palette ──────────────────────────────────────────────────
+    const skin = ray.Color.init(100, 200, 100, 255);
+    const eye_w = ray.Color.init(255, 255, 255, 255);
+    const pupil = ray.Color.init(10, 10, 10, 255);
+    const tongue = ray.Color.init(210, 35, 35, 255);
+
+    // ── Head sphere ──────────────────────────────────────────────
+    const head_r = 0.30 * s;
+    const head_y = head_r; // bottom of sphere touches the cell floor
+    ray.drawSphereEx(L(pos, 0, head_y, 0, forward, up, right), head_r, 18, 18, skin);
+
+    // ── Eyes ─────────────────────────────────────────────────────
+    const eye_r = 0.065 * s;
+    const pupil_r = 0.032 * s;
+    const eye_fwd = 0.20 * s; // 0.04
+    const eye_uy = head_y + head_r * 0.45; // 0.55
+    const eye_lz = 0.09 * s;
+    const pupil_fwd = 0.038 * s; // 0.018
+
+    // Left
+    ray.drawSphereEx(L(pos, eye_fwd, eye_uy, eye_lz, forward, up, right), eye_r, 16, 16, eye_w);
+    ray.drawSphereEx(L(pos, eye_fwd + pupil_fwd, eye_uy + 0.01 * s, eye_lz, forward, up, right), pupil_r, 16, 16, pupil);
+    // Right
+    ray.drawSphereEx(L(pos, eye_fwd, eye_uy, -eye_lz, forward, up, right), eye_r, 16, 16, eye_w);
+    ray.drawSphereEx(L(pos, eye_fwd + pupil_fwd, eye_uy + 0.01 * s, -eye_lz, forward, up, right), pupil_r, 16, 16, pupil);
+
+    // ── Tongue shaft ─────────────────────────────────────────────
+    const tongue_start = L(pos, head_r * 0.85, head_y * 0.85, 0, forward, up, right);
+    const tongue_mid = L(pos, head_r * 0.85 + 0.14 * s, head_y * 0.85, 0, forward, up, right);
+    ray.drawCylinderEx(tongue_start, tongue_mid, 0.012 * s, 0.009 * s, 6, tongue);
+
+    // ── Forked tips ──────────────────────────────────────────────
+    const fork_len = 0.06 * s;
+    const fork_spread = 0.022 * s;
+    inline for (.{ fork_spread, -fork_spread }) |spread| {
+        ray.drawCylinderEx(
+            tongue_mid,
+            L(tongue_mid, fork_len, 0.008 * s, spread, forward, up, right),
+            0.007 * s,
+            0.003 * s,
+            5,
+            tongue,
+        );
+    }
+}
+
+fn drawSnakeBodySegment(pos: ray.Vector3, scale: f32) void {
+    const skin = ray.Color.init(100, 200, 100, 255);
+    const r = 0.5 * scale;
+    ray.drawSphereEx(.{ .x = pos.x, .y = pos.y + r, .z = pos.z }, r, 18, 18, skin);
 }
 
 /// Procedurally renders a raspberry from 3D primitives.
@@ -216,26 +288,17 @@ pub fn run(init: std.process.Init) !void {
         // Reference grid on the plane
         ray.drawGrid(@max(_cols, _rows), _cell_size);
 
-        // Cube resting on the plane (center at y=0.5, bottom touches y=0)
-        ray.drawCube(
-            .{ .x = 0, .y = 0.5 * _cell_size, .z = 0 },
-            _cell_size,
-            _cell_size,
-            _cell_size,
-            ray.getColor(SNAKE_COLOR),
-        );
-
-        // Wireframe outline for visual definition
-        ray.drawCubeWires(
-            .{ .x = 0, .y = 0.5 * _cell_size, .z = 0 },
-            _cell_size,
-            _cell_size,
-            _cell_size,
-            ray.getColor(SNAKE_COLOR),
-        );
-
         // Fruit
-        drawRaspberry(.{ .x = 2.5 * _cell_size, .y = 0, .z = 0 }, 0.7);
+        drawRaspberry(.{ .x = (3 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 0.7);
+
+        // Snake head
+        drawSnakeHead(.{ .x = (1 + 0.5 - 0.02) * _cell_size, .y = 0 * _cell_size, .z = 0.5 * _cell_size }, ray.Vector3{ .x = 1, .y = 0, .z = 0 }, 1.65);
+
+        // Snake body
+        drawSnakeBodySegment(.{ .x = (0 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
+        drawSnakeBodySegment(.{ .x = (-1 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
+        drawSnakeBodySegment(.{ .x = (-2 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
+        drawSnakeBodySegment(.{ .x = (-3 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
 
         // Walls
         ray.drawCube(
