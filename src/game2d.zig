@@ -172,11 +172,6 @@ const GameBoard = struct {
     }
 };
 
-// Why I even need this function?
-//export fn _start(init: std.process.Init) void {
-//    run(init) catch |err| std.debug.print("Error: {}\n", .{err});
-//}
-
 pub fn run(init: std.process.Init) !void {
     // Initialize your deterministic PRNG with the seed
     const timestamp = std.Io.Clock.now(.real, init.io);
