@@ -27,6 +27,7 @@ pub fn run(init: std.process.Init) !void {
         .projection = .perspective,
     };
 
+    ray.disableCursor();
     ray.setTargetFPS(60);
 
     while (!ray.windowShouldClose()) {
@@ -43,7 +44,7 @@ pub fn run(init: std.process.Init) !void {
 
         // Ground plane (XZ plane, horizontal)
         ray.drawPlane(
-            .{ .x = 0, .y = 0, .z = 0 },
+            .{ .x = 0, .y = 0, .z = -0.001 },
             .{ .x = 16, .y = 16 },
             ray.getColor(0x3D3D5CFF),
         );
