@@ -75,8 +75,6 @@ const PlayerDirection = enum(u8) {
 };
 
 const GameBoard = struct {
-    cols: u16 = 0,
-    rows: u16 = 0,
     rect_buffer: [_cols * _rows]Rect,
     player: Snake,
     player_direction: PlayerDirection,
@@ -84,8 +82,6 @@ const GameBoard = struct {
 
     pub fn init() GameBoard {
         return .{
-            .cols = _cols,
-            .rows = _rows,
             .player = Snake.init(.{ .x = 10, .y = 10 }, .{ .x = @as(i16, @intCast(_cols)), .y = @as(i16, @intCast(_rows)) }),
             .player_direction = .RIGHT,
             .rect_buffer = [_]Rect{
@@ -93,7 +89,7 @@ const GameBoard = struct {
                     .pos = .{ .x = 0, .y = 0 },
                     .color = 0x000000FF,
                 },
-            } ** 3600,
+            } ** (_cols * _rows),
             .food = .{
                 .pos = .{
                     .x = @as(i16, @intCast(rand.intRangeAtMost(u16, 0, _cols - 1))),
@@ -111,8 +107,8 @@ const GameBoard = struct {
 
     pub fn predraw(self: *GameBoard) !void {
         //std.debug.assert(self.rect_buffer.len == 0);
-        for (0..self.rows) |i| for (0..self.cols) |j| {
-            self.rect_buffer[(i * self.cols) + j] = .{
+        for (0.._rows) |i| for (0.._cols) |j| {
+            self.rect_buffer[(i * _cols) + j] = .{
                 .size = .{ .x = 8, .y = 8 },
                 .pos = .{ .x = @as(i16, @intCast(j)), .y = @as(i16, @intCast(i)) },
                 .color = BOARD_COLOR,
@@ -122,12 +118,12 @@ const GameBoard = struct {
 
     pub fn draw(self: *GameBoard) void {
         //Draw food
-        const food_coord: u16 = (@as(u16, @intCast(self.food.pos.y)) * self.cols) + @as(u16, @intCast(self.food.pos.x));
+        const food_coord: u16 = (@as(u16, @intCast(self.food.pos.y)) * _cols) + @as(u16, @intCast(self.food.pos.x));
         self.rect_buffer[food_coord].color = FOOD_COLOR;
 
         //Draw player
         for (self.player.segments[0..self.player.size], 0..) |seg, n| {
-            const flat_coord: u16 = (@as(u16, @intCast(seg.y)) * self.cols) + @as(u16, @intCast(seg.x));
+            const flat_coord: u16 = (@as(u16, @intCast(seg.y)) * _cols) + @as(u16, @intCast(seg.x));
             std.debug.assert(flat_coord < self.rect_buffer.len);
             self.rect_buffer[flat_coord].color = SNAKE_COLOR;
 
@@ -214,8 +210,8 @@ fn pollPlayerEvents(board: *GameBoard) void {
     if (board.player.pos.x == board.food.pos.x and board.player.pos.y == board.food.pos.y) {
         board.player.size += 1;
         board.food.pos = .{
-            .x = @as(i16, @intCast(rand.intRangeAtMost(u16, 0, board.cols - 1))),
-            .y = @as(i16, @intCast(rand.intRangeAtMost(u16, 0, board.rows - 1))),
+            .x = @as(i16, @intCast(rand.intRangeAtMost(u16, 0, _cols - 1))),
+            .y = @as(i16, @intCast(rand.intRangeAtMost(u16, 0, _rows - 1))),
         };
     }
 }
