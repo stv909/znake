@@ -8,12 +8,19 @@ const SNAKE_COLOR = 0x81D4FAFF; // Light Blue Pastel
 const FOOD_COLOR = 0xFFCDD2FF; // Soft Coral
 
 const screen_width: comptime_int = 800;
-const screen_height: comptime_int = 450;
-
-const cell_size: comptime_int = 10;
-
-const _cols: comptime_int = screen_width / cell_size;
-const _rows: comptime_int = screen_height / cell_size;
+const screen_height: comptime_int = 600;
+const _cell_size: comptime_int = 10;
+const _margin_size = 2;
+comptime {
+    if (screen_width % _cell_size != 0 or screen_height % _cell_size != 0) {
+        @compileError("screen_width and screen_height must be divisible by cell_size");
+    }
+    if (_cell_size <= _margin_size) {
+        @compileError("cell_size must be greater than margin_size");
+    }
+}
+const _cols: comptime_int = screen_width / _cell_size;
+const _rows: comptime_int = screen_height / _cell_size;
 
 const Vector2 = struct {
     x: i16,
@@ -21,7 +28,7 @@ const Vector2 = struct {
 };
 
 const Snake = struct {
-    size: u16 = 10,
+    size: u16 = _cell_size,
     segments: [1024]Vector2 = [_]Vector2{.{ .x = 0, .y = 0 }} ** 1024,
     pos: Vector2,
     bounds: Vector2,
@@ -63,7 +70,7 @@ const Snake = struct {
 
 const Rect = struct {
     pos: Vector2,
-    size: Vector2 = .{ .x = 8, .y = 8 },
+    size: Vector2 = .{ .x = _cell_size - _margin_size, .y = _cell_size - _margin_size },
     color: u32,
 };
 
@@ -81,6 +88,7 @@ const GameBoard = struct {
     food: Rect,
 
     pub fn init() GameBoard {
+        std.debug.print("\ngame board size {d}\n", .{(_cols * _rows)});
         return .{
             .player = Snake.init(.{ .x = 10, .y = 10 }, .{ .x = @as(i16, @intCast(_cols)), .y = @as(i16, @intCast(_rows)) }),
             .player_direction = .RIGHT,
@@ -109,7 +117,7 @@ const GameBoard = struct {
         //std.debug.assert(self.rect_buffer.len == 0);
         for (0.._rows) |i| for (0.._cols) |j| {
             self.rect_buffer[(i * _cols) + j] = .{
-                .size = .{ .x = 8, .y = 8 },
+                .size = .{ .x = _cell_size - _margin_size, .y = _cell_size - _margin_size },
                 .pos = .{ .x = @as(i16, @intCast(j)), .y = @as(i16, @intCast(i)) },
                 .color = BOARD_COLOR,
             };
@@ -136,8 +144,8 @@ const GameBoard = struct {
         //Draw board
         for (&self.rect_buffer) |*rect| {
             ray.drawRectangle(
-                @as(i32, @intCast(rect.pos.x * 10)),
-                @as(i32, @intCast(rect.pos.y * 10)),
+                @as(i32, @intCast(rect.pos.x * _cell_size)),
+                @as(i32, @intCast(rect.pos.y * _cell_size)),
                 @as(i32, @intCast(rect.size.x)),
                 @as(i32, @intCast(rect.size.y)),
                 ray.getColor(rect.color),
