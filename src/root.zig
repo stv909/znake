@@ -202,14 +202,10 @@ pub fn run(init: std.process.Init) !void {
 fn pollKeyEvents(board: *GameBoard) void {
     const ky = ray.getKeyPressed();
     switch (ky) {
-        .left => board.player_direction = .LEFT,
-        .right => board.player_direction = .RIGHT,
-        .up => board.player_direction = .TOP,
-        .down => board.player_direction = .BOTTOM,
-        .a => board.player_direction = .LEFT,
-        .d => board.player_direction = .RIGHT,
-        .w => board.player_direction = .TOP,
-        .s => board.player_direction = .BOTTOM,
+        .a, .left => board.player_direction = .LEFT,
+        .d, .right => board.player_direction = .RIGHT,
+        .w, .up => board.player_direction = .TOP,
+        .s, .down => board.player_direction = .BOTTOM,
         else => {},
     }
 }
