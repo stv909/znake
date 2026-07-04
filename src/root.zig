@@ -75,8 +75,6 @@ const PlayerDirection = enum(u8) {
 };
 
 const GameBoard = struct {
-    height: u16 = 400,
-    width: u16 = 400,
     cols: u16 = 0,
     rows: u16 = 0,
     rect_buffer: [_cols * _rows]Rect,
@@ -84,10 +82,8 @@ const GameBoard = struct {
     player_direction: PlayerDirection,
     food: Rect,
 
-    pub fn init(width: u16, height: u16) GameBoard {
+    pub fn init() GameBoard {
         return .{
-            .height = height,
-            .width = width,
             .cols = _cols,
             .rows = _rows,
             .player = Snake.init(.{ .x = 10, .y = 10 }, .{ .x = @as(i16, @intCast(_cols)), .y = @as(i16, @intCast(_rows)) }),
@@ -168,7 +164,7 @@ pub fn run(init: std.process.Init) !void {
     var prng = std.Random.DefaultPrng.init(seed);
     rand = prng.random();
 
-    var gb = GameBoard.init(screen_width, screen_height);
+    var gb = GameBoard.init();
     defer gb.deinit();
 
     try gb.predraw();
