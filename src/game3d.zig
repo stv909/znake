@@ -72,7 +72,7 @@ pub fn run(init: std.process.Init) !void {
 
         // Ground plane (XZ plane, horizontal)
         ray.drawPlane(
-            .{ .x = 0, .y = 0, .z = 0 },
+            .{ .x = 0, .y = -0.01, .z = 0 },
             .{ .x = 16, .y = 16 },
             ray.getColor(0x3D3D5CFF),
         );
