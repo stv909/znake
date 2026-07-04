@@ -10,8 +10,10 @@ const FOOD_COLOR = 0xFFCDD2FF; // Soft Coral
 const screen_width: comptime_int = 800;
 const screen_height: comptime_int = 450;
 
-const _cols: comptime_int = screen_width / 10;
-const _rows: comptime_int = screen_height / 10;
+const cell_size: comptime_int = 10;
+
+const _cols: comptime_int = screen_width / cell_size;
+const _rows: comptime_int = screen_height / cell_size;
 
 const Vector2 = struct {
     x: i16,
