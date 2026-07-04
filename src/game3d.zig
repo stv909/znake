@@ -24,7 +24,7 @@ comptime {
 ///   pos   – world position (bottom-center of the cell)
 ///   dir   – normalised direction the snake faces
 ///   scale – size multiplier (1.0 fills one cell)
-fn drawSnakeHead(pos: ray.Vector3, dir: ray.Vector3, scale: f32) void {
+fn drawSnakeHead3rd(pos: ray.Vector3, dir: ray.Vector3, scale: f32) void {
     const s = scale;
 
     // Local coordinate frame
@@ -65,6 +65,49 @@ fn drawSnakeHead(pos: ray.Vector3, dir: ray.Vector3, scale: f32) void {
     // Right
     ray.drawSphereEx(L(pos, eye_fwd, eye_uy, -eye_lz, forward, up, right), eye_r, 16, 16, eye_w);
     ray.drawSphereEx(L(pos, eye_fwd + pupil_fwd, eye_uy + 0.01 * s, -eye_lz, forward, up, right), pupil_r, 16, 16, pupil);
+
+    // ── Tongue shaft ─────────────────────────────────────────────
+    const tongue_start = L(pos, head_r * 0.85, head_y * 0.85, 0, forward, up, right);
+    const tongue_mid = L(pos, head_r * 0.85 + 0.14 * s, head_y * 0.85, 0, forward, up, right);
+    ray.drawCylinderEx(tongue_start, tongue_mid, 0.012 * s, 0.009 * s, 6, tongue);
+
+    // ── Forked tips ──────────────────────────────────────────────
+    const fork_len = 0.06 * s;
+    const fork_spread = 0.022 * s;
+    inline for (.{ fork_spread, -fork_spread }) |spread| {
+        ray.drawCylinderEx(
+            tongue_mid,
+            L(tongue_mid, fork_len, 0.008 * s, spread, forward, up, right),
+            0.007 * s,
+            0.003 * s,
+            5,
+            tongue,
+        );
+    }
+}
+
+fn drawSnakeHead1st(pos: ray.Vector3, dir: ray.Vector3, scale: f32) void {
+    const s = scale;
+
+    // Local coordinate frame
+    const forward = dir.normalize();
+    const world_up = ray.Vector3{ .x = 0, .y = 1, .z = 0 };
+    const right = world_up.crossProduct(forward).normalize();
+    const up = forward.crossProduct(right).normalize();
+
+    // Local → world helper
+    const L = struct {
+        fn at(b: ray.Vector3, fx: f32, uy: f32, rz: f32, f: ray.Vector3, u: ray.Vector3, r: ray.Vector3) ray.Vector3 {
+            return b.add(f.scale(fx)).add(u.scale(uy)).add(r.scale(rz));
+        }
+    }.at;
+
+    // ── Palette ──────────────────────────────────────────────────
+    const tongue = ray.Color.init(210, 35, 35, 255);
+
+    // ── Head sphere ──────────────────────────────────────────────
+    const head_r = 0.30 * s;
+    const head_y = head_r; // bottom of sphere touches the cell floor
 
     // ── Tongue shaft ─────────────────────────────────────────────
     const tongue_start = L(pos, head_r * 0.85, head_y * 0.85, 0, forward, up, right);
@@ -216,6 +259,8 @@ fn drawRaspberry(pos: ray.Vector3, scale: f32) void {
     }
 }
 
+var fps_camera = false;
+
 pub fn run(init: std.process.Init) !void {
     // Initialize your deterministic PRNG with the seed
     const timestamp = std.Io.Clock.now(.real, init.io);
@@ -250,7 +295,11 @@ pub fn run(init: std.process.Init) !void {
 
     while (!ray.windowShouldClose()) {
         // Mouse orbital control: move to orbit, scroll to zoom
-        {
+        if (fps_camera) {
+            camera.position = player_position;
+            camera.position = camera.position.add(.{ .x = 0.5, .y = 0.7, .z = 0.5 }).add(player_direction.scale(0));
+            camera.target = player_position.add(player_direction.scale(10.0));
+        } else {
             const delta = ray.getMouseDelta();
             angle_horizontal -= delta.x * 0.3;
             angle_vertical += delta.y * 0.3;
@@ -295,10 +344,12 @@ pub fn run(init: std.process.Init) !void {
         drawRaspberry(.{ .x = (3 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 0.7);
 
         // Snake head
-        {
+        if (fps_camera) {
             const p = player_position;
-            const d = player_direction;
-            drawSnakeHead(.{ .x = (p.x + 0.5 - 0.02) * _cell_size, .y = 0 * _cell_size, .z = p.z + 0.5 * _cell_size }, d, 1.65);
+            drawSnakeHead1st(.{ .x = (p.x + 0.5 - 0.02) * _cell_size, .y = 0 * _cell_size, .z = p.z + 0.5 * _cell_size }, player_direction, 1.65);
+        } else {
+            const p = player_position;
+            drawSnakeHead3rd(.{ .x = (p.x + 0.5 - 0.02) * _cell_size, .y = 0 * _cell_size, .z = p.z + 0.5 * _cell_size }, player_direction, 1.65);
         }
 
         // Snake body
@@ -341,15 +392,28 @@ pub fn run(init: std.process.Init) !void {
         const delta = 0.03 * _cell_size;
         player_position = player_position.add(player_direction.scale(delta));
 
-        pollKeyEvents(&player_direction);
+        pollKeyEvents(&player_direction, &camera);
     }
 }
 
-fn pollKeyEvents(player_direction: *ray.Vector3) void {
+fn pollKeyEvents(player_direction: *ray.Vector3, camera: *ray.Camera3D) void {
     const rotation_speed = 0.05;
     if (ray.isKeyDown(.a) or ray.isKeyDown(.left)) {
         player_direction.* = player_direction.*.rotateByAxisAngle(.{ .x = 0, .y = 1, .z = 0 }, rotation_speed);
     } else if (ray.isKeyDown(.d) or ray.isKeyDown(.right)) {
         player_direction.* = player_direction.*.rotateByAxisAngle(.{ .x = 0, .y = 1, .z = 0 }, -rotation_speed);
+    }
+    const ky = ray.getKeyPressed();
+    switch (ky) {
+        .space => {
+            if (fps_camera) {
+                camera.*.position = .{ .x = 6.0, .y = 5.0, .z = 6.0 };
+                camera.*.target = .{ .x = 0.0, .y = 0.5, .z = 0.0 };
+                fps_camera = false;
+            } else {
+                fps_camera = true;
+            }
+        },
+        else => {},
     }
 }
