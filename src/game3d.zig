@@ -19,6 +19,13 @@ comptime {
     }
 }
 
+const PlayerDirection = enum(u8) {
+    LEFT,
+    RIGHT,
+    TOP,
+    BOTTOM,
+};
+
 /// Draw a snake head that fits inside one _cell_size cube.
 ///
 ///   pos   – world position (bottom-center of the cell)
@@ -245,6 +252,9 @@ pub fn run(init: std.process.Init) !void {
     var distance: f32 = 10.0;
     const target = ray.Vector3{ .x = 0, .y = 0.5, .z = 0 };
 
+    var player_direction: PlayerDirection = .RIGHT;
+    var player_position = ray.Vector3.zero();
+
     while (!ray.windowShouldClose()) {
         // Mouse orbital control: move to orbit, scroll to zoom
         {
@@ -292,13 +302,22 @@ pub fn run(init: std.process.Init) !void {
         drawRaspberry(.{ .x = (3 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 0.7);
 
         // Snake head
-        drawSnakeHead(.{ .x = (1 + 0.5 - 0.02) * _cell_size, .y = 0 * _cell_size, .z = 0.5 * _cell_size }, ray.Vector3{ .x = 1, .y = 0, .z = 0 }, 1.65);
+        {
+            const p = player_position;
+            const d = switch (player_direction) {
+                .LEFT => ray.Vector3{ .x = -1, .y = 0, .z = 0 },
+                .RIGHT => ray.Vector3{ .x = 1, .y = 0, .z = 0 },
+                .TOP => ray.Vector3{ .x = 0, .y = 0, .z = -1 },
+                .BOTTOM => ray.Vector3{ .x = 0, .y = 0, .z = 1 },
+            };
+            drawSnakeHead(.{ .x = (p.x + 0.5 - 0.02) * _cell_size, .y = 0 * _cell_size, .z = p.z + 0.5 * _cell_size }, d, 1.65);
+        }
 
         // Snake body
-        drawSnakeBodySegment(.{ .x = (0 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
-        drawSnakeBodySegment(.{ .x = (-1 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
-        drawSnakeBodySegment(.{ .x = (-2 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
-        drawSnakeBodySegment(.{ .x = (-3 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
+        //drawSnakeBodySegment(.{ .x = (0 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
+        //drawSnakeBodySegment(.{ .x = (-1 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
+        //drawSnakeBodySegment(.{ .x = (-2 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
+        //drawSnakeBodySegment(.{ .x = (-3 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
 
         // Walls
         ray.drawCube(
@@ -329,5 +348,43 @@ pub fn run(init: std.process.Init) !void {
             _cell_size,
             ray.getColor(WALL_COLOR),
         );
+
+        // Update game logic
+        const delta = 0.03 * _cell_size;
+        switch (player_direction) {
+            .LEFT => {
+                player_position.x -= delta;
+            },
+            .RIGHT => {
+                player_position.x += delta;
+            },
+            .TOP => {
+                player_position.z -= delta;
+            },
+            .BOTTOM => {
+                player_position.z += delta;
+            },
+        }
+
+        pollKeyEvents(&player_direction);
+    }
+}
+
+fn pollKeyEvents(player_direction: *PlayerDirection) void {
+    const ky = ray.getKeyPressed();
+    switch (ky) {
+        .a, .left => switch (player_direction.*) {
+            .LEFT => player_direction.* = .BOTTOM,
+            .BOTTOM => player_direction.* = .RIGHT,
+            .RIGHT => player_direction.* = .TOP,
+            .TOP => player_direction.* = .LEFT,
+        },
+        .d, .right => switch (player_direction.*) {
+            .LEFT => player_direction.* = .TOP,
+            .TOP => player_direction.* = .RIGHT,
+            .RIGHT => player_direction.* = .BOTTOM,
+            .BOTTOM => player_direction.* = .LEFT,
+        },
+        else => {},
     }
 }
