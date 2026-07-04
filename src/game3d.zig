@@ -30,9 +30,35 @@ pub fn run(init: std.process.Init) !void {
     ray.disableCursor();
     ray.setTargetFPS(60);
 
+    var angle_horizontal: f32 = 45.0; // degrees, azimuth
+    var angle_vertical: f32 = 45.0; // degrees, elevation
+    var distance: f32 = 10.0;
+    const target = ray.Vector3{ .x = 0, .y = 0.5, .z = 0 };
+
     while (!ray.windowShouldClose()) {
-        // Update camera: right-click + drag to orbit, scroll to zoom
-        camera.update(.orbital);
+        // Mouse orbital control: move to orbit, scroll to zoom
+        {
+            const delta = ray.getMouseDelta();
+            angle_horizontal -= delta.x * 0.3;
+            angle_vertical += delta.y * 0.3;
+
+            // Clamp vertical angle to avoid flipping
+            if (angle_vertical > 89.0) angle_vertical = 89.0;
+            if (angle_vertical < -89.0) angle_vertical = -89.0;
+
+            // Zoom with mouse wheel
+            const wheel = ray.getMouseWheelMove();
+            distance -= wheel;
+            if (distance < 0.1) distance = 0.1;
+
+            // Calculate new camera position using spherical coordinates
+            const rad_h = angle_horizontal * std.math.pi / 180.0;
+            const rad_v = angle_vertical * std.math.pi / 180.0;
+
+            camera.position.x = target.x + distance * @cos(rad_v) * @cos(rad_h);
+            camera.position.y = target.y + distance * @sin(rad_v);
+            camera.position.z = target.z + distance * @cos(rad_v) * @sin(rad_h);
+        }
 
         ray.beginDrawing();
         defer ray.endDrawing();
@@ -42,9 +68,11 @@ pub fn run(init: std.process.Init) !void {
         camera.begin();
         defer camera.end();
 
+        std.debug.print("camera.position = {any}\n", .{camera.position});
+
         // Ground plane (XZ plane, horizontal)
         ray.drawPlane(
-            .{ .x = 0, .y = 0, .z = -0.001 },
+            .{ .x = 0, .y = 0, .z = 0 },
             .{ .x = 16, .y = 16 },
             ray.getColor(0x3D3D5CFF),
         );
