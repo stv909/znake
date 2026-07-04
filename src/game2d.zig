@@ -24,6 +24,7 @@ comptime {
     }
 }
 const _texture_offset = 1;
+const _game_speed_fps = 10;
 
 const Vector2 = struct {
     x: i16,
@@ -191,7 +192,7 @@ pub fn run(init: std.process.Init) !void {
 
     try gb.loadTextures();
 
-    ray.setTargetFPS(10); // Set our game to run at 60 frames-per-second
+    ray.setTargetFPS(_game_speed_fps); // Set our game to run at 60 frames-per-second
 
     while (!ray.windowShouldClose()) {
         ray.beginDrawing();
