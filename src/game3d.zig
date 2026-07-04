@@ -3,6 +3,11 @@ const ray = @import("raylib");
 
 var rand: std.Random = undefined;
 
+const BACK_COLOR = 0x404040FF;
+const BOARD_COLOR = 0x2E2E2EFF; // Jet Black
+const SNAKE_COLOR = 0x81D4FAFF; // Light Blue Pastel
+//const FOOD_COLOR = 0xFFCDD2FF; // Soft Coral
+
 pub fn run(init: std.process.Init) !void {
     // Initialize your deterministic PRNG with the seed
     const timestamp = std.Io.Clock.now(.real, init.io);
@@ -63,7 +68,7 @@ pub fn run(init: std.process.Init) !void {
         ray.beginDrawing();
         defer ray.endDrawing();
 
-        ray.clearBackground(ray.getColor(0x1A1A2EFF)); // Dark navy
+        ray.clearBackground(ray.getColor(BACK_COLOR)); // Dark navy
 
         camera.begin();
         defer camera.end();
@@ -74,7 +79,7 @@ pub fn run(init: std.process.Init) !void {
         ray.drawPlane(
             .{ .x = 0, .y = -0.01, .z = 0 },
             .{ .x = 16, .y = 16 },
-            ray.getColor(0x3D3D5CFF),
+            ray.getColor(BOARD_COLOR),
         );
 
         // Reference grid on the plane
@@ -86,7 +91,7 @@ pub fn run(init: std.process.Init) !void {
             1.0,
             1.0,
             1.0,
-            ray.getColor(0xFF6B6BFF), // Coral red
+            ray.getColor(SNAKE_COLOR), // Coral red
         );
 
         // Wireframe outline for visual definition
@@ -95,7 +100,7 @@ pub fn run(init: std.process.Init) !void {
             1.0,
             1.0,
             1.0,
-            ray.getColor(0x1A1A2EFF),
+            ray.getColor(BOARD_COLOR),
         );
     }
 }
