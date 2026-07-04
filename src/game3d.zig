@@ -81,8 +81,6 @@ pub fn run(init: std.process.Init) !void {
         camera.begin();
         defer camera.end();
 
-        std.debug.print("camera.position = {any}\n", .{camera.position});
-
         // Ground plane (XZ plane, horizontal)
         ray.drawPlane(
             .{ .x = 0, .y = -0.03 * _cell_size, .z = 0 },
