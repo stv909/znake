@@ -4,6 +4,7 @@ const ray = @import("raylib");
 var rand: std.Random = undefined;
 
 const BACK_COLOR = 0x404040FF;
+const WALL_COLOR = 0xFF6B6BFF; // Coral
 const BOARD_COLOR = 0x2E2E2EFF; // Jet Black
 const SNAKE_COLOR = 0x81D4FAFF; // Light Blue Pastel
 //const FOOD_COLOR = 0xFFCDD2FF; // Soft Coral
@@ -107,6 +108,36 @@ pub fn run(init: std.process.Init) !void {
             _cell_size,
             _cell_size,
             ray.getColor(SNAKE_COLOR),
+        );
+
+        // Walls
+        ray.drawCube(
+            .{ .x = -0.5 * (_cols + 1) * _cell_size, .y = 0, .z = 0 },
+            _cell_size,
+            _cell_size,
+            (_rows + 1) * _cell_size,
+            ray.getColor(WALL_COLOR),
+        );
+        ray.drawCube(
+            .{ .x = 0.5 * (_cols + 1) * _cell_size, .y = 0, .z = 0 },
+            _cell_size,
+            _cell_size,
+            (_rows + 1) * _cell_size,
+            ray.getColor(WALL_COLOR),
+        );
+        ray.drawCube(
+            .{ .x = 0, .y = 0, .z = -0.5 * (_rows + 1) * _cell_size },
+            (_cols + 1) * _cell_size,
+            _cell_size,
+            _cell_size,
+            ray.getColor(WALL_COLOR),
+        );
+        ray.drawCube(
+            .{ .x = 0, .y = 0, .z = 0.5 * (_rows + 1) * _cell_size },
+            (_cols + 1) * _cell_size,
+            _cell_size,
+            _cell_size,
+            ray.getColor(WALL_COLOR),
         );
     }
 }
