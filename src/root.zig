@@ -7,11 +7,13 @@ const BOARD_COLOR = 0x2E2E2EFF; // Jet Black
 const SNAKE_COLOR = 0x81D4FAFF; // Light Blue Pastel
 const FOOD_COLOR = 0xFFCDD2FF; // Soft Coral
 
-const screen_width: comptime_int = 1400;
+const raspberry_image_data = @embedFile("icons8-raspberry-24.png");
+
+const screen_width: comptime_int = 900;
 const screen_height: comptime_int = 800;
-const _cols: comptime_int = 64;
-const _rows: comptime_int = 64;
-const _cell_size: comptime_int = 10;
+const _cols: comptime_int = 32;
+const _rows: comptime_int = 32;
+const _cell_size: comptime_int = 24;
 const _margin_size = 2;
 comptime {
     if (_cols * _rows >= 8192) {
@@ -21,6 +23,7 @@ comptime {
         @compileError("cell_size must be greater than margin_size");
     }
 }
+const _texture_offset = 1;
 
 const Vector2 = struct {
     x: i16,
@@ -90,6 +93,7 @@ const GameBoard = struct {
     rect_buffer: [_cols * _rows]Rect,
     player: Snake,
     food: Rect,
+    food_texture: ray.Texture = undefined,
 
     pub fn init() GameBoard {
         std.debug.print("\ngame board size {d}\n", .{(_cols * _rows)});
@@ -108,12 +112,12 @@ const GameBoard = struct {
                 },
                 .color = FOOD_COLOR,
             },
+            .food_texture = undefined,
         };
     }
 
     pub fn deinit(self: *GameBoard) void {
-        _ = self;
-        //self.rect_buffer.deinit();
+        ray.unloadTexture(self.food_texture);
     }
 
     pub fn predraw(self: *GameBoard) !void {
@@ -127,11 +131,13 @@ const GameBoard = struct {
         };
     }
 
-    pub fn draw(self: *GameBoard) void {
-        //Draw food
-        const food_coord: u16 = (@as(u16, @intCast(self.food.pos.y)) * _cols) + @as(u16, @intCast(self.food.pos.x));
-        self.rect_buffer[food_coord].color = FOOD_COLOR;
+    pub fn loadTextures(self: *GameBoard) !void {
+        const image = try ray.loadImageFromMemory(".png", raspberry_image_data);
+        defer ray.unloadImage(image);
+        self.food_texture = try ray.loadTextureFromImage(image);
+    }
 
+    pub fn draw(self: *GameBoard) void {
         //Draw player
         for (self.player.segments[0..self.player.size], 0..) |seg, n| {
             const flat_coord: u16 = (@as(u16, @intCast(seg.y)) * _cols) + @as(u16, @intCast(seg.x));
@@ -155,6 +161,14 @@ const GameBoard = struct {
             );
             rect.color = BOARD_COLOR;
         }
+
+        //Draw food texture on top of the board
+        ray.drawTexture(
+            self.food_texture,
+            @as(i32, @intCast(self.food.pos.x)) * _cell_size - _texture_offset,
+            @as(i32, @intCast(self.food.pos.y)) * _cell_size - _texture_offset,
+            ray.getColor(0xFFFFFFFF),
+        );
     }
 };
 
@@ -179,6 +193,8 @@ pub fn run(init: std.process.Init) !void {
     ray.initWindow(screen_width, screen_height, "znake");
     errdefer ray.closeWindow();
     defer ray.closeWindow(); // Close window and OpenGL context
+
+    try gb.loadTextures();
 
     ray.setTargetFPS(10); // Set our game to run at 60 frames-per-second
 
