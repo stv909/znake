@@ -32,11 +32,13 @@ const Snake = struct {
     segments: [1024]Vector2 = [_]Vector2{.{ .x = 0, .y = 0 }} ** 1024,
     pos: Vector2,
     bounds: Vector2,
+    direction: PlayerDirection,
 
-    pub fn init(pos: Vector2, bounds: Vector2) Snake {
+    pub fn init(pos: Vector2, bounds: Vector2, direction: PlayerDirection) Snake {
         return .{
             .pos = pos,
             .bounds = bounds,
+            .direction = direction,
         };
     }
 
@@ -84,14 +86,12 @@ const PlayerDirection = enum(u8) {
 const GameBoard = struct {
     rect_buffer: [_cols * _rows]Rect,
     player: Snake,
-    player_direction: PlayerDirection,
     food: Rect,
 
     pub fn init() GameBoard {
         std.debug.print("\ngame board size {d}\n", .{(_cols * _rows)});
         return .{
-            .player = Snake.init(.{ .x = 10, .y = 10 }, .{ .x = @as(i16, @intCast(_cols)), .y = @as(i16, @intCast(_rows)) }),
-            .player_direction = .RIGHT,
+            .player = Snake.init(.{ .x = 10, .y = 10 }, .{ .x = @as(i16, @intCast(_cols)), .y = @as(i16, @intCast(_rows)) }, .RIGHT),
             .rect_buffer = [_]Rect{
                 .{
                     .pos = .{ .x = 0, .y = 0 },
@@ -185,7 +185,7 @@ pub fn run(init: std.process.Init) !void {
 
         gb.draw();
 
-        switch (gb.player_direction) {
+        switch (gb.player.direction) {
             .RIGHT => gb.player.move(.{ .x = 1, .y = 0 }),
             .LEFT => gb.player.move(.{ .x = -1, .y = 0 }),
             .TOP => gb.player.move(.{ .x = 0, .y = -1 }),
@@ -202,10 +202,10 @@ pub fn run(init: std.process.Init) !void {
 fn pollKeyEvents(board: *GameBoard) void {
     const ky = ray.getKeyPressed();
     switch (ky) {
-        .a, .left => board.player_direction = .LEFT,
-        .d, .right => board.player_direction = .RIGHT,
-        .w, .up => board.player_direction = .TOP,
-        .s, .down => board.player_direction = .BOTTOM,
+        .a, .left => board.player.direction = .LEFT,
+        .d, .right => board.player.direction = .RIGHT,
+        .w, .up => board.player.direction = .TOP,
+        .s, .down => board.player.direction = .BOTTOM,
         else => {},
     }
 }
