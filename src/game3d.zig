@@ -13,6 +13,7 @@ const screen_height: comptime_int = 800;
 const _cols: comptime_int = 20;
 const _rows: comptime_int = 12;
 const _cell_size: comptime_int = 1.0;
+const _max_body_length: comptime_int = 128 * 1024;
 comptime {
     if (_cols * _rows >= 8192) {
         @compileError("board size exceeds maximum segment count");
@@ -294,6 +295,7 @@ pub fn run(init: std.process.Init) !void {
     var player_position = ray.Vector3.zero();
     var fruit_position: ray.Vector3 = .{ .x = rand.intRangeAtMost(i16, -_cols / 2, _cols / 2 - 1) * _cell_size, .y = 0.0, .z = rand.intRangeAtMost(i16, -_rows / 2, _rows / 2 - 1) * _cell_size };
     var player_body_length: u16 = 0;
+    var player_body_positions: [_max_body_length]ray.Vector3 = [_]ray.Vector3{.{ .x = 0, .y = 0, .z = 0 }} ** _max_body_length;
 
     while (!ray.windowShouldClose()) {
         // Mouse orbital control: move to orbit, scroll to zoom
@@ -356,8 +358,12 @@ pub fn run(init: std.process.Init) !void {
 
         // Snake body
         if (player_body_length > 0) {
+            player_body_positions[0] = player_position.add(player_body_positions[0].add(player_position.scale(-1)).normalize());
             for (1..player_body_length) |i| {
-                const p = player_direction.scale(-@as(f32, @floatFromInt(i))).add(player_position);
+                player_body_positions[i] = player_body_positions[i - 1].add(player_body_positions[i].add(player_body_positions[i - 1].scale(-1)).normalize());
+            }
+            for (0..player_body_length) |i| {
+                const p = player_body_positions[i];
                 drawSnakeBodySegment(.{ .x = (p.x + 0.5) * _cell_size, .y = 0, .z = (p.z + 0.5) * _cell_size }, 1.0);
             }
         }
@@ -398,6 +404,11 @@ pub fn run(init: std.process.Init) !void {
 
         if (player_position.distance(fruit_position) < 0.8 * _cell_size) {
             fruit_position = .{ .x = rand.intRangeAtMost(i16, -_cols / 2, _cols / 2 - 1) * _cell_size, .y = 0.0, .z = rand.intRangeAtMost(i16, -_rows / 2, _rows / 2 - 1) * _cell_size };
+            player_body_positions[player_body_length] = switch (player_body_length) {
+                0 => player_position.add(player_direction.scale(-1)),
+                1 => player_body_positions[0].add(player_body_positions[0].add(player_position.scale(-1)).normalize()),
+                else => player_body_positions[player_body_length - 1].add(player_body_positions[player_body_length - 1].add(player_body_positions[player_body_length - 2].scale(-1)).normalize()),
+            };
             player_body_length += 1;
             std.debug.print("Fruit eaten!\n", .{}); // TODO: replace it by special animation to celebrate the moment
         }
