@@ -292,6 +292,7 @@ pub fn run(init: std.process.Init) !void {
 
     var player_direction: ray.Vector3 = .{ .x = 1.0, .y = 0.0, .z = 0.0 };
     var player_position = ray.Vector3.zero();
+    var fruit_position: ray.Vector3 = .{ .x = rand.intRangeAtMost(i16, -_cols / 2, _cols / 2 - 1) * _cell_size, .y = 0.0, .z = rand.intRangeAtMost(i16, -_rows / 2, _rows / 2 - 1) * _cell_size };
 
     while (!ray.windowShouldClose()) {
         // Mouse orbital control: move to orbit, scroll to zoom
@@ -341,7 +342,7 @@ pub fn run(init: std.process.Init) !void {
         ray.drawGrid(@max(_cols, _rows), _cell_size);
 
         // Fruit
-        drawRaspberry(.{ .x = (3 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 0.7);
+        drawRaspberry(.{ .x = fruit_position.x + 0.5 * _cell_size, .y = 0, .z = fruit_position.z + 0.5 * _cell_size }, 0.7);
 
         // Snake head
         if (fps_camera) {
@@ -391,6 +392,11 @@ pub fn run(init: std.process.Init) !void {
         // Update game logic
         const delta = 0.03 * _cell_size;
         player_position = player_position.add(player_direction.scale(delta));
+
+        if (player_position.distance(fruit_position) < 0.8 * _cell_size) {
+            fruit_position = .{ .x = rand.intRangeAtMost(i16, -_cols / 2, _cols / 2 - 1) * _cell_size, .y = 0.0, .z = rand.intRangeAtMost(i16, -_rows / 2, _rows / 2 - 1) * _cell_size };
+            std.debug.print("Fruit eaten!\n", .{}); // TODO: replace it by special animation to celebrate the moment
+        }
 
         pollKeyEvents(&player_direction, &camera);
     }
