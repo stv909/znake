@@ -293,6 +293,7 @@ pub fn run(init: std.process.Init) !void {
     var player_direction: ray.Vector3 = .{ .x = 1.0, .y = 0.0, .z = 0.0 };
     var player_position = ray.Vector3.zero();
     var fruit_position: ray.Vector3 = .{ .x = rand.intRangeAtMost(i16, -_cols / 2, _cols / 2 - 1) * _cell_size, .y = 0.0, .z = rand.intRangeAtMost(i16, -_rows / 2, _rows / 2 - 1) * _cell_size };
+    var player_body_length: u16 = 0;
 
     while (!ray.windowShouldClose()) {
         // Mouse orbital control: move to orbit, scroll to zoom
@@ -354,10 +355,12 @@ pub fn run(init: std.process.Init) !void {
         }
 
         // Snake body
-        //drawSnakeBodySegment(.{ .x = (0 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
-        //drawSnakeBodySegment(.{ .x = (-1 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
-        //drawSnakeBodySegment(.{ .x = (-2 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
-        //drawSnakeBodySegment(.{ .x = (-3 + 0.5) * _cell_size, .y = 0, .z = 0.5 * _cell_size }, 1.0);
+        if (player_body_length > 0) {
+            for (1..player_body_length) |i| {
+                const p = player_direction.scale(-@as(f32, @floatFromInt(i))).add(player_position);
+                drawSnakeBodySegment(.{ .x = (p.x + 0.5) * _cell_size, .y = 0, .z = (p.z + 0.5) * _cell_size }, 1.0);
+            }
+        }
 
         // Walls
         ray.drawCube(
@@ -395,6 +398,7 @@ pub fn run(init: std.process.Init) !void {
 
         if (player_position.distance(fruit_position) < 0.8 * _cell_size) {
             fruit_position = .{ .x = rand.intRangeAtMost(i16, -_cols / 2, _cols / 2 - 1) * _cell_size, .y = 0.0, .z = rand.intRangeAtMost(i16, -_rows / 2, _rows / 2 - 1) * _cell_size };
+            player_body_length += 1;
             std.debug.print("Fruit eaten!\n", .{}); // TODO: replace it by special animation to celebrate the moment
         }
 
