@@ -370,7 +370,16 @@ pub fn run(init: std.process.Init) !void {
         const delta = 0.03 * _cell_size;
         player_position = player_position.add(player_direction.scale(delta));
 
-        if (player_position.distance(fruit_position) < 0.8 * _cell_size) {
+        if (player_body_length > 1) {
+            for (1..player_body_length) |i| {
+                if (player_position.distance(player_body_positions[i]) < 1.0) {
+                    player_body_length = 0;
+                    std.debug.print("Self bite O__O\n", .{}); // TODO: replace it by special animation to celebrate the moment
+                    break;
+                }
+            }
+        }
+        if (player_position.distance(fruit_position) < 0.8) {
             fruit_position = .{ .x = rand.intRangeAtMost(i16, -_cols / 2, _cols / 2 - 1) * _cell_size, .y = 0.0, .z = rand.intRangeAtMost(i16, -_rows / 2, _rows / 2 - 1) * _cell_size };
             player_body_positions[player_body_length] = switch (player_body_length) {
                 0 => player_position.add(player_direction.scale(-1)),
