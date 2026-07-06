@@ -4,9 +4,9 @@ const ray = @import("raylib");
 var rand: std.Random = undefined;
 
 const BACK_COLOR = 0x404040FF;
-const WALL_COLOR = 0x81D4FAFF; // Light Blue Pastel
-const BOARD_COLOR = 0x2E2E2EFF; // Jet Black
+const BOARD_COLOR = 0xB5A68EFF; // Dark Sand
 //const FOOD_COLOR = 0xFFCDD2FF; // Soft Coral
+const SKIN_COLOR = ray.Color.init(75, 150, 75, 255);
 
 const screen_width: comptime_int = 900;
 const screen_height: comptime_int = 800;
@@ -42,7 +42,6 @@ fn drawSnakeHead3rd(pos: ray.Vector3, dir: ray.Vector3, scale: f32) void {
     }.at;
 
     // ── Palette ──────────────────────────────────────────────────
-    const skin = ray.Color.init(100, 200, 100, 255);
     const eye_w = ray.Color.init(255, 255, 255, 255);
     const pupil = ray.Color.init(10, 10, 10, 255);
     const tongue = ray.Color.init(210, 35, 35, 255);
@@ -50,7 +49,7 @@ fn drawSnakeHead3rd(pos: ray.Vector3, dir: ray.Vector3, scale: f32) void {
     // ── Head sphere ──────────────────────────────────────────────
     const head_r = 0.30 * s;
     const head_y = head_r; // bottom of sphere touches the cell floor
-    ray.drawSphereEx(L(pos, 0, head_y, 0, forward, up, right), head_r, 18, 18, skin);
+    ray.drawSphereEx(L(pos, 0, head_y, 0, forward, up, right), head_r, 18, 18, SKIN_COLOR);
 
     // ── Eyes ─────────────────────────────────────────────────────
     const eye_r = 0.065 * s;
@@ -131,9 +130,8 @@ fn drawSnakeHead1st(pos: ray.Vector3, dir: ray.Vector3, scale: f32) void {
 }
 
 fn drawSnakeBodySegment(pos: ray.Vector3, scale: f32) void {
-    const skin = ray.Color.init(100, 200, 100, 255);
     const r = 0.5 * scale;
-    ray.drawSphereEx(.{ .x = pos.x, .y = pos.y + r, .z = pos.z }, r, 18, 18, skin);
+    ray.drawSphereEx(.{ .x = pos.x, .y = pos.y + r, .z = pos.z }, r, 18, 18, SKIN_COLOR);
 }
 
 /// Procedurally renders a raspberry from 3D primitives.
@@ -367,36 +365,6 @@ pub fn run(init: std.process.Init) !void {
                 drawSnakeBodySegment(.{ .x = (p.x + 0.5) * _cell_size, .y = 0, .z = (p.z + 0.5) * _cell_size }, 1.0);
             }
         }
-
-        // Walls
-        ray.drawCube(
-            .{ .x = -0.5 * (_cols + 1) * _cell_size, .y = 0, .z = 0 },
-            _cell_size,
-            _cell_size,
-            (_rows + 1) * _cell_size,
-            ray.getColor(WALL_COLOR),
-        );
-        ray.drawCube(
-            .{ .x = 0.5 * (_cols + 1) * _cell_size, .y = 0, .z = 0 },
-            _cell_size,
-            _cell_size,
-            (_rows + 1) * _cell_size,
-            ray.getColor(WALL_COLOR),
-        );
-        ray.drawCube(
-            .{ .x = 0, .y = 0, .z = -0.5 * (_rows + 1) * _cell_size },
-            (_cols + 1) * _cell_size,
-            _cell_size,
-            _cell_size,
-            ray.getColor(WALL_COLOR),
-        );
-        ray.drawCube(
-            .{ .x = 0, .y = 0, .z = 0.5 * (_rows + 1) * _cell_size },
-            (_cols + 1) * _cell_size,
-            _cell_size,
-            _cell_size,
-            ray.getColor(WALL_COLOR),
-        );
 
         // Update game logic
         const delta = 0.03 * _cell_size;
