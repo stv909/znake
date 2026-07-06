@@ -337,7 +337,7 @@ pub fn run(init: std.process.Init) !void {
 
     // Orbital camera: starts above and to the side, looking at the cube
     var camera = ray.Camera3D{
-        .position = .{ .x = 6.0, .y = 5.0, .z = 6.0 },
+        .position = .{ .x = 0.0, .y = 5.0, .z = 0.0 },
         .target = .{ .x = 0.0, .y = 0.5, .z = 0.0 },
         .up = .{ .x = 0.0, .y = 1.0, .z = 0.0 },
         .fovy = 45.0,
@@ -347,9 +347,9 @@ pub fn run(init: std.process.Init) !void {
     ray.disableCursor();
     ray.setTargetFPS(60);
 
-    var angle_horizontal: f32 = 45.0; // degrees, azimuth
-    var angle_vertical: f32 = 45.0; // degrees, elevation
-    var distance: f32 = 10.0;
+    var angle_horizontal: f32 = 90.0; // degrees, azimuth
+    var angle_vertical: f32 = 90.0; // degrees, elevation
+    var distance: f32 = 25.0;
     const target = ray.Vector3{ .x = 0, .y = 0.5, .z = 0 };
 
     var player_direction: ray.Vector3 = .{ .x = 1.0, .y = 0.0, .z = 0.0 };
@@ -385,6 +385,7 @@ pub fn run(init: std.process.Init) !void {
             camera.position.x = target.x + distance * @cos(rad_v) * @cos(rad_h);
             camera.position.y = target.y + distance * @sin(rad_v);
             camera.position.z = target.z + distance * @cos(rad_v) * @sin(rad_h);
+            std.debug.print("angel h, v: {d}, {d}\n", .{ angle_horizontal, angle_vertical });
         }
 
         ray.beginDrawing();
@@ -474,7 +475,7 @@ fn pollKeyEvents(player_direction: *ray.Vector3, camera: *ray.Camera3D) void {
     switch (ky) {
         .space => {
             if (fps_camera) {
-                camera.*.position = .{ .x = 6.0, .y = 5.0, .z = 6.0 };
+                camera.*.position = .{ .x = 0.0, .y = 5.0, .z = 0.0 };
                 camera.*.target = .{ .x = 0.0, .y = 0.5, .z = 0.0 };
                 fps_camera = false;
             } else {
