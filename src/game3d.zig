@@ -20,6 +20,70 @@ comptime {
     }
 }
 
+// ── Animated message overlay ──────────────────────────────────
+
+const Message = struct {
+    text: []const u8,
+    color: ray.Color,
+};
+
+var overlay_message: ?Message = null;
+var overlay_timer: f32 = 0;
+const overlay_lifetime: f32 = 2.0;
+
+/// Trigger a floating message that animates in and fades out.
+fn showMessage(text: []const u8, color: ray.Color) void {
+    overlay_message = .{ .text = text, .color = color };
+    overlay_timer = 0;
+}
+
+/// Draw the current message (if any) as a 2D screen-space overlay.
+/// Call this *after* camera.end() — i.e. outside 3D mode.
+fn drawMessageOverlay() void {
+    const msg = overlay_message orelse return;
+
+    overlay_timer += ray.getFrameTime();
+    if (overlay_timer > overlay_lifetime) {
+        overlay_message = null;
+        return;
+    }
+
+    const t = overlay_timer;
+
+    // Bounce-in scale  (0 → 0.25 s)
+    const scale_in = 0.25;
+    const scale: f32 = if (t < scale_in)
+        0.5 + 0.5 * (t / scale_in)
+    else
+        1.0;
+
+    // Fade-out alpha  (last 0.5 s)
+    const fade_start = overlay_lifetime - 0.5;
+    const alpha: f32 = if (t > fade_start)
+        @max(0, 1.0 - (t - fade_start) / 0.5)
+    else
+        1.0;
+
+    const font_size: i32 = @intFromFloat(48.0 * scale);
+    const text: [:0]const u8 = @ptrCast(msg.text);
+    const text_w = ray.measureText(text, font_size);
+    const x: i32 = @divTrunc(screen_width - text_w, 2);
+    const y: i32 = @divTrunc(screen_height, 2) - 60;
+
+    // Drop shadow
+    const shadow = ray.Color.init(0, 0, 0, @intFromFloat(160.0 * alpha));
+    ray.drawText(text, x + 2, y + 2, font_size, shadow);
+
+    // Main text
+    const c = ray.Color.init(
+        msg.color.r,
+        msg.color.g,
+        msg.color.b,
+        @intFromFloat(@as(f32, @floatFromInt(msg.color.a)) * alpha),
+    );
+    ray.drawText(text, x, y, font_size, c);
+}
+
 /// Draw a snake head that fits inside one _cell_size cube.
 ///
 ///   pos   – world position (bottom-center of the cell)
@@ -267,7 +331,6 @@ pub fn run(init: std.process.Init) !void {
     const seed: u64 = @as(u64, @intCast(seconds));
     var prng = std.Random.DefaultPrng.init(seed);
     rand = prng.random();
-    std.debug.print("rand {d}\n", .{rand.intRangeAtMost(u16, 0, 100)});
 
     ray.initWindow(screen_width, screen_height, "znake 3D");
     defer ray.closeWindow();
@@ -329,42 +392,48 @@ pub fn run(init: std.process.Init) !void {
 
         ray.clearBackground(ray.getColor(BACK_COLOR)); // Dark navy
 
-        camera.begin();
-        defer camera.end();
+        // ── 3D scene ────────────────────────────────────────────
+        {
+            camera.begin();
+            defer camera.end();
 
-        // Ground plane (XZ plane, horizontal)
-        ray.drawPlane(
-            .{ .x = 0, .y = -0.03 * _cell_size, .z = 0 },
-            .{ .x = _cols * _cell_size, .y = _rows * _cell_size },
-            ray.getColor(BOARD_COLOR),
-        );
+            // Ground plane (XZ plane, horizontal)
+            ray.drawPlane(
+                .{ .x = 0, .y = -0.03 * _cell_size, .z = 0 },
+                .{ .x = _cols * _cell_size, .y = _rows * _cell_size },
+                ray.getColor(BOARD_COLOR),
+            );
 
-        // Reference grid on the plane
-        ray.drawGrid(@max(_cols, _rows), _cell_size);
+            // Reference grid on the plane
+            ray.drawGrid(@max(_cols, _rows), _cell_size);
 
-        // Fruit
-        drawRaspberry(.{ .x = fruit_position.x + 0.5 * _cell_size, .y = 0, .z = fruit_position.z + 0.5 * _cell_size }, 0.7);
+            // Fruit
+            drawRaspberry(.{ .x = fruit_position.x + 0.5 * _cell_size, .y = 0, .z = fruit_position.z + 0.5 * _cell_size }, 0.7);
 
-        // Snake head
-        if (fps_camera) {
-            const p = player_position;
-            drawSnakeHead1st(.{ .x = (p.x + 0.5 - 0.02) * _cell_size, .y = 0 * _cell_size, .z = p.z + 0.5 * _cell_size }, player_direction, 1.65);
-        } else {
-            const p = player_position;
-            drawSnakeHead3rd(.{ .x = (p.x + 0.5 - 0.02) * _cell_size, .y = 0 * _cell_size, .z = p.z + 0.5 * _cell_size }, player_direction, 1.65);
+            // Snake head
+            if (fps_camera) {
+                const p = player_position;
+                drawSnakeHead1st(.{ .x = (p.x + 0.5 - 0.02) * _cell_size, .y = 0 * _cell_size, .z = p.z + 0.5 * _cell_size }, player_direction, 1.65);
+            } else {
+                const p = player_position;
+                drawSnakeHead3rd(.{ .x = (p.x + 0.5 - 0.02) * _cell_size, .y = 0 * _cell_size, .z = p.z + 0.5 * _cell_size }, player_direction, 1.65);
+            }
+
+            // Snake body
+            if (player_body_length > 0) {
+                player_body_positions[0] = player_position.add(player_body_positions[0].add(player_position.scale(-1)).normalize());
+                for (1..player_body_length) |i| {
+                    player_body_positions[i] = player_body_positions[i - 1].add(player_body_positions[i].add(player_body_positions[i - 1].scale(-1)).normalize());
+                }
+                for (0..player_body_length) |i| {
+                    const p = player_body_positions[i];
+                    drawSnakeBodySegment(.{ .x = (p.x + 0.5) * _cell_size, .y = 0, .z = (p.z + 0.5) * _cell_size }, 1.0);
+                }
+            }
         }
 
-        // Snake body
-        if (player_body_length > 0) {
-            player_body_positions[0] = player_position.add(player_body_positions[0].add(player_position.scale(-1)).normalize());
-            for (1..player_body_length) |i| {
-                player_body_positions[i] = player_body_positions[i - 1].add(player_body_positions[i].add(player_body_positions[i - 1].scale(-1)).normalize());
-            }
-            for (0..player_body_length) |i| {
-                const p = player_body_positions[i];
-                drawSnakeBodySegment(.{ .x = (p.x + 0.5) * _cell_size, .y = 0, .z = (p.z + 0.5) * _cell_size }, 1.0);
-            }
-        }
+        // ── 2D overlay (after camera.end) ───────────────────────
+        drawMessageOverlay();
 
         // Update game logic
         const delta = 0.03 * _cell_size;
@@ -374,7 +443,7 @@ pub fn run(init: std.process.Init) !void {
             for (1..player_body_length) |i| {
                 if (player_position.distance(player_body_positions[i]) < 1.0) {
                     player_body_length = 0;
-                    std.debug.print("Self bite O__O\n", .{}); // TODO: replace it by special animation to celebrate the moment
+                    showMessage("Self bite O__O", ray.Color.init(255, 60, 60, 255));
                     break;
                 }
             }
@@ -387,7 +456,7 @@ pub fn run(init: std.process.Init) !void {
                 else => player_body_positions[player_body_length - 1].add(player_body_positions[player_body_length - 1].add(player_body_positions[player_body_length - 2].scale(-1)).normalize()),
             };
             player_body_length += 1;
-            std.debug.print("Fruit eaten!\n", .{}); // TODO: replace it by special animation to celebrate the moment
+            showMessage("Fruit eaten!", ray.Color.init(255, 215, 0, 255));
         }
 
         pollKeyEvents(&player_direction, &camera);
