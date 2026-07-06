@@ -385,7 +385,6 @@ pub fn run(init: std.process.Init) !void {
             camera.position.x = target.x + distance * @cos(rad_v) * @cos(rad_h);
             camera.position.y = target.y + distance * @sin(rad_v);
             camera.position.z = target.z + distance * @cos(rad_v) * @sin(rad_h);
-            std.debug.print("angel h, v: {d}, {d}\n", .{ angle_horizontal, angle_vertical });
         }
 
         ray.beginDrawing();
